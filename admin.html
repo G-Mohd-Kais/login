@@ -1342,100 +1342,123 @@
 
         // Load section data
         async function loadSectionData(section) {
-            try {
-                const response = await fetch(API_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        action: "getData",
-                        section: section,
-                        password: ADMIN_PASSWORD
-                    })
-                });
-                const data = await response.json();
-                
-                if (data.success) {
-                    switch(section) {
-                        case 'hero':
-                            if (data.data.length > 1) {
-                                const heroData = data.data[1];
-                                document.getElementById('hero-title').value = heroData[0] || '';
-                                document.getElementById('hero-subtitle').value = heroData[1] || '';
-                                document.getElementById('hero-description').value = heroData[2] || '';
-                                if (heroData[3]) {
-                                    document.getElementById('hero-image-preview').src = heroData[3];
-                                }
-                            }
-                            break;
-                        case 'about':
-                            if (data.data.length > 1) {
-                                const aboutData = data.data[1];
-                                document.getElementById('about-title').value = aboutData[0] || '';
-                                document.getElementById('about-heading').value = aboutData[1] || 'Who Am I?';
-                                document.getElementById('about-description').value = aboutData[2] || '';
-                                
-                                // Load highlights if available
-                                if (aboutData[3]) {
-                                    const highlights = JSON.parse(aboutData[3]);
-                                    const container = document.getElementById('about-highlights-container');
-                                    container.innerHTML = '';
-                                    
-                                    Object.values(highlights).forEach((highlight, index) => {
-                                        const highlightId = `highlight-${index + 1}`;
-                                        const highlightHTML = `
-                                            <div class="highlight-item-editor mb-4 p-3 border rounded" data-id="${highlightId}">
-                                                <div class="row">
-                                                    <div class="col-md-2">
-                                                        <div class="mb-3">
-                                                            <label class="form-label">Icon</label>
-                                                            <select class="form-select highlight-icon" id="${highlightId}-icon">
-                                                                <option value="fa-graduation-cap" ${highlight.icon === 'fa-graduation-cap' ? 'selected' : ''}>Graduation</option>
-                                                                <option value="fa-briefcase" ${highlight.icon === 'fa-briefcase' ? 'selected' : ''}>Briefcase</option>
-                                                                <option value="fa-project-diagram" ${highlight.icon === 'fa-project-diagram' ? 'selected' : ''}>Project</option>
-                                                                <option value="fa-trophy" ${highlight.icon === 'fa-trophy' ? 'selected' : ''}>Trophy</option>
-                                                                <option value="fa-star" ${highlight.icon === 'fa-star' ? 'selected' : ''}>Star</option>
-                                                            </select>
-                                                        </div>
-                                                    </div>
-                                                    <div class="col-md-5">
-                                                        <div class="mb-3">
-                                                            <label class="form-label">Title</label>
-                                                            <input type="text" class="form-control highlight-title" id="${highlightId}-title" value="${highlight.title || ''}">
-                                                        </div>
-                                                    </div>
-                                                    <div class="col-md-5">
-                                                        <div class="mb-3">
-                                                            <label class="form-label">Description</label>
-                                                            <input type="text" class="form-control highlight-desc" id="${highlightId}-desc" value="${highlight.description || ''}">
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div class="d-flex justify-content-end">
-                                                    <button class="btn btn-sm btn-danger remove-highlight-btn">Remove</button>
-                                                </div>
-                                            </div>
-                                        `;
-                                        container.innerHTML += highlightHTML;
-                                        
-                                        // Add event listener to the new remove button
-                                        container.querySelector(`.remove-highlight-btn`).addEventListener('click', (e) => {
-                                            e.target.closest('.highlight-item-editor').remove();
-                                        });
-                                    });
-                                }
-                            }
-                            break;
-                        // Add cases for other sections (projects, certifications, etc.)
-                    }
-                }
-            } catch (error) {
-                console.error('Error loading section data:', error);
-                alert('Error loading section data');
+  console.log(`Attempting to load: ${section}`);
+  try {
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        action: "getData",
+        section: section,
+        password: ADMIN_PASSWORD
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+
+    const result = await response.json();
+    console.log("Raw API response:", result);
+
+    if (!result.success) {
+      throw new Error(result.message || "Unknown backend error");
+    }
+
+    // Process the data based on section
+    switch(section) {
+    case 'hero':
+        if (result.data && result.data[1]) {
+            const heroData = result.data[1];
+            document.getElementById('hero-title').value = heroData[0] || '';
+            document.getElementById('hero-subtitle').value = heroData[1] || '';
+            document.getElementById('hero-description').value = heroData[2] || '';
+            if (heroData[3]) {
+                document.getElementById('hero-image-preview').src = heroData[3];
             }
         }
+        break;
+        
+    case 'about':
+        if (result.data && result.data[1]) {
+            const aboutData = result.data[1];
+            // Basic fields
+            document.getElementById('about-title').value = aboutData[0] || '';
+            document.getElementById('about-heading').value = aboutData[1] || '';
+            document.getElementById('about-description').value = aboutData[2] || '';
+            
+            // Image handling
+            if (aboutData[3]) {
+                document.getElementById('about-image-preview').src = aboutData[3];
+            }
+            
+            // Highlights (if stored as JSON string)
+            if (aboutData[4]) {
+                const highlights = JSON.parse(aboutData[4]);
+                const container = document.getElementById('about-highlights-container');
+                container.innerHTML = '';
+                
+                Object.values(highlights).forEach((highlight, index) => {
+                    const highlightId = `highlight-${index + 1}`;
+                    container.innerHTML += `
+                        <div class="highlight-item-editor mb-4 p-3 border rounded">
+                            <div class="row">
+                                <div class="col-md-2">
+                                    <div class="mb-3">
+                                        <label class="form-label">Icon</label>
+                                        <select class="form-select highlight-icon">
+                                            ${getIconOptions(highlight.icon)}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-5">
+                                    <input type="text" class="form-control highlight-title" 
+                                           value="${highlight.title || ''}">
+                                </div>
+                                <div class="col-md-5">
+                                    <input type="text" class="form-control highlight-desc" 
+                                           value="${highlight.description || ''}">
+                                </div>
+                            </div>
+                            <button class="btn btn-sm btn-danger remove-highlight-btn">Remove</button>
+                        </div>`;
+                });
+            }
+        }
+        break;
+        
+    case 'projects':
+        // Add projects section handling here
+        break;
+        
+    case 'certifications':
+        // Add certifications handling here
+        break;
+}
 
+// Helper function for icon dropdown
+function getIconOptions(selectedIcon = '') {
+    const icons = [
+        {value: 'fa-graduation-cap', label: 'Graduation'},
+        {value: 'fa-briefcase', label: 'Briefcase'},
+        {value: 'fa-project-diagram', label: 'Project'},
+        {value: 'fa-trophy', label: 'Trophy'},
+        {value: 'fa-star', label: 'Star'}
+    ];
+    
+    return icons.map(icon => 
+        `<option value="${icon.value}" ${selectedIcon === icon.value ? 'selected' : ''}>
+            ${icon.label}
+        </option>`
+    ).join('');
+}
+    }
+
+  } catch (error) {
+    console.error("Full error details:", error);
+    alert(`Failed to load ${section} data. Error: ${error.message}`);
+  }
+}
         // Save section data
         async function saveSectionData(section, sectionData) {
             try {
